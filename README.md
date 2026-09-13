@@ -85,9 +85,9 @@ That suggests the first real question worth an answer:
 
 | | in the algebra | here |
 |---|---|---|
-| `+` | routing: disjoint shapes, each keeping its own positions | **the whole of refinement.** Different issues go to different delegates |
-| `⊠` | both shapes up front, **both replies owed** | the chat room: put the issue to every delegate, tally all the answers |
-| `◁` | the reply to the first chooses the second | a delegation **chain**: you → party → a member |
+| `+` | routing: disjoint shapes, each keeping its own positions | **relay.** One delegate per issue; refinement is which summand |
+| `⊠` | both shapes up front, **both replies owed** | amalgamation: every sub-voter polled, every reply owed, then folded |
+| `◁` | the reply to the first chooses the second | a delegation **chain**: you → party → sub-party → a member |
 | `×` | both offered, exactly one answered | a fallback: your second choice if your first abstains |
 
 `+` doing the work is the notable one. `stalin` never used it, `federation`
@@ -120,16 +120,18 @@ header cannot be a type, and which reports the class of the cycle it found. That
 is the algorithm for "whose vote is this, really", with cycle detection included
 rather than bolted on.
 
-**~~The graph is functional~~ — corrected in `design.pdf`.** This file claimed
-that per issue each citizen delegates to at most one representative, so
-out-degree ≤ 1, the graph is functional and every component is ρ-shaped.
+**~~The graph is functional~~ — corrected in `design.pdf` §4.** This file claimed
+that each voter delegates to at most one representative, so out-degree ≤ 1, the
+graph is functional and every component is ρ-shaped.
 
-That holds for the delegation tree alone and **fails once a party is involved**,
-because a party polls several members: out-degree is 1 at a citizen and n at a
-party. So resolution is a fold over a **tree**, not a walk down a path; cycle
-detection is per branch rather than per component; and the same delegate may be
-reached by two routes, which is a question about weights before it is one about
-cycles. See `design.pdf` §5.
+A `Fold` has out-degree n. So resolution is a fold over a **tree**, not a walk
+down a path; cycle detection is per branch rather than per component; and the
+same voter may be reached by several routes, which is a question about weights
+before it is one about cycles.
+
+Recursion makes it worse in a way worth stating plainly: **a cycle may now run
+between parties**, where no individual citizen did anything wrong. "Report it to
+the citizen so they can repair it" stops being an adequate policy at depth.
 
 ## What democracy gets for free that the firm had to pay for
 
@@ -180,18 +182,40 @@ whip — and the family stops being constant.
 
 ## The design
 
-[`design.pdf`](design.pdf) — the algebra, the types, and the two trees. Both
-trees carry the same forward map and differ entirely in the backward one:
-delegation relays (identity, `+`, exactly one answers), a party amalgamates
-(a fold, `⊠`, several answer). It is the first of these projects in which all
-four combinators are load-bearing.
+[`design.pdf`](design.pdf) — the algebra, the types, and the one recursive
+structure. An earlier draft had *two* trees, one for citizens and one for
+parties. There is one: **internally, a party is a citizen**, with its own
+delegation tree over the same issue tree, delegating to sub-parties and to
+individuals exactly as a citizen delegates to parties and individuals.
+
+Per issue, a voter does one of three things — and the three are a container:
+
+```
+F(X)  =    1    +    X    +  List(X)
+         Leaf      Relay      Fold
+```
+
+An electorate is an F-coalgebra `V → F(V)`. Resolution asks for an F-algebra on
+votes, and its three components are exactly the three backward maps: your own
+opinion, the identity (delegation relays), and the fold (a party amalgamates).
+
+> **Resolution is the unique coalgebra-to-algebra morphism, and it exists
+> precisely when the delegation is well-founded.** An acyclic electorate lives in
+> the initial algebra μF — a finite tree. A cyclic one lives only in the final
+> coalgebra νF, because a cycle unfolds to an infinite tree. The cycle problem is
+> the gap between the two fixed points and nothing else.
 
 ## What to build first
 
-A tree of issues, a handful of citizens with refinable delegations, and
-`resolve(citizen, issue)` that walks the chain with `visited` in the prompt and
-reports either a vote or the cycle it fell into. That is small, it is the part
-everything else rests on, and it makes the cycle question concrete enough to
-argue about.
+A tree of issues and `delegateFor` with inheritance; then `resolve` as a tree
+fold with `visited` **and** `fuel` in the prompt, returning a `Ballot` that
+admits `Cast`, `Cycle`, `Exhausted` and `Abstain`. Cycle policy and
+fold-meets-failure both pluggable, defaulting to abstain, so the arguments can be
+had against running code. See `design.pdf` §9.
+
+The question that blocks `resolve` and has no mathematical answer: **when one
+branch of a fold cycles or exhausts, does the party abstain wholesale, or fold
+over the branches that answered?** Folding over the survivors is kinder and
+quietly moves the majority threshold.
 
 `lib/` is not vendored yet; it will be, from `federation`, when there is code.

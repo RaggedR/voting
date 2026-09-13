@@ -120,12 +120,16 @@ header cannot be a type, and which reports the class of the cycle it found. That
 is the algorithm for "whose vote is this, really", with cycle detection included
 rather than bolted on.
 
-**The graph is functional, which makes the shape of failure narrow.** Per issue,
-each citizen delegates to at most one representative, so out-degree ≤ 1 and every
-component is ρ-shaped: a tail running into a single cycle. A vote resolves iff
-its component terminates at a citizen who actually votes. So the failure mode is
-not "somewhere in the graph there is a cycle" but "*your* path ends in one",
-which is reportable to the individual and repairable by them.
+**~~The graph is functional~~ — corrected in `design.pdf`.** This file claimed
+that per issue each citizen delegates to at most one representative, so
+out-degree ≤ 1, the graph is functional and every component is ρ-shaped.
+
+That holds for the delegation tree alone and **fails once a party is involved**,
+because a party polls several members: out-degree is 1 at a citizen and n at a
+party. So resolution is a fold over a **tree**, not a walk down a path; cycle
+detection is per branch rather than per component; and the same delegate may be
+reached by two routes, which is a question about weights before it is one about
+cycles. See `design.pdf` §5.
 
 ## What democracy gets for free that the firm had to pay for
 
@@ -173,6 +177,14 @@ whip — and the family stops being constant.
    that `federation/business-model.pdf` is about exactly the case where consensus
    cannot be reached and a resource must be allocated or fought over, so the
    extension has somewhere to start.
+
+## The design
+
+[`design.pdf`](design.pdf) — the algebra, the types, and the two trees. Both
+trees carry the same forward map and differ entirely in the backward one:
+delegation relays (identity, `+`, exactly one answers), a party amalgamates
+(a fold, `⊠`, several answer). It is the first of these projects in which all
+four combinators are load-bearing.
 
 ## What to build first
 

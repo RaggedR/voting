@@ -1,0 +1,314 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{fontspec}
+\setmainfont{lmroman10-regular.otf}[
+  BoldFont=lmroman10-bold.otf,
+  ItalicFont=lmroman10-italic.otf,
+  BoldItalicFont=lmroman10-bolditalic.otf,
+]
+\setmonofont{Menlo}[Scale=0.86, Ligatures=NoCommon]
+\usepackage{microtype}
+\usepackage{xcolor}
+\definecolor{seclink}{HTML}{1F4E8C}
+\usepackage[colorlinks=true,linkcolor=seclink,citecolor=seclink,urlcolor=blue]{hyperref}
+\usepackage{parskip}
+\usepackage{fancyvrb}
+\usepackage[most]{tcolorbox}
+
+\definecolor{yellowbg}{HTML}{FBF3D5}
+\definecolor{pinkbg}{HTML}{FADDE1}
+\definecolor{bluebg}{HTML}{E8EEF7}
+
+\tcbset{plainbg/.style={boxrule=0pt, sharp corners, colframe=white,
+  left=4mm, right=4mm, top=3mm, bottom=3mm, before skip=3mm, after skip=3mm,
+  before upper={\setlength{\parskip}{0.6\baselineskip}}}}
+\newtcolorbox{sectionbox}{plainbg, colback=yellowbg}
+\newtcolorbox{alarmbox}{plainbg, colback=pinkbg}
+\newtcolorbox{notebox}{plainbg, colback=bluebg}
+
+\DefineVerbatimEnvironment{term}{Verbatim}{fontsize=\footnotesize, xleftmargin=0mm}
+
+\newtheorem*{claim}{Claim}
+\newtheorem*{obs}{Observation}
+
+\title{\vspace{-2em}Two Trees}
+\author{\normalsize A design for delegated voting: the algebra, the types,\\[0.2em]
+\normalsize and the one thing the formalism refuses to decide}
+\date{\normalsize Claude, 14 September 2026}
+
+\begin{document}
+\maketitle
+\vspace{-1em}
+
+\begin{sectionbox}
+Design only. Nothing here is built; the point of writing it first is that one
+of the claims in \texttt{README.md} turned out to be wrong as soon as the second
+tree was taken seriously, and it is cheaper to find that here.
+
+The brief is in \texttt{PROBLEM.md}. In one line: every citizen votes on every
+issue, nobody has time, so a vote is a \emph{delegation} --- refinable issue by
+issue, all the way down --- and the finest issues are settled in chat rooms where
+a delegate's vote counts once per citizen who sent it to them.
+\end{sectionbox}
+
+\section{One container}
+
+\[
+  \mathrm{IssueC} \;=\; \mathrm{Issue} \,\triangleleft\, \mathrm{Vote}
+\]
+
+A shape is an issue; a position is a valid vote \emph{on that issue}. The
+dependency is not decorative. A referendum admits aye or nay, a seat admits a
+candidate from a list, a budget line admits a number in a range, and a vote of
+the wrong kind is not a dissenting vote but a type error.
+
+\begin{sectionbox}
+\textbf{A citizen is a \texttt{Runner<IssueC>}}: somebody an issue can be put to,
+who answers. That is the entire ontology.
+
+``Regular citizen'', ``politically active citizen'' and ``political party'' are
+not three types. They are three ways of being a runner --- answering from your
+own head, answering by asking one other, answering by asking several and
+combining. The type cannot tell them apart, and should not, because that is what
+makes becoming politically active a decision rather than a migration.
+\end{sectionbox}
+
+\section{The two trees}
+
+Both trees carry the same forward map and differ entirely in the backward one.
+That is the design.
+
+\subsection*{The delegation tree}
+
+Rooted at a citizen. Its skeleton is the \emph{issue} tree --- government,
+then health, education and military, then their sub-issues --- and a delegate is
+attached at whichever nodes the citizen has bothered to assign. Everything below
+an assignment inherits it until overridden.
+
+\begin{term}
+  (citizen)
+  |- health ................... party C
+  |- education ................ party A
+  |    |- early childhood ..... (inherits A)
+  |    |- STEM ................ (inherits A)
+  |    |- art and creativity .. Sarah Smith      <- overrides, this subtree only
+  |    '- physical education .. (inherits A)
+  '- military ................. party C
+\end{term}
+
+So a delegation is a \textbf{partial function on the issue tree, extended
+downward by inheritance}. The total function it denotes is on leaves; the partial
+function is its presentation; and the lazy delegation --- party B for everything
+--- is the constant function, presented by one assignment at the root.
+
+Exactly one delegate answers any given issue. The backward map is therefore the
+\textbf{identity}: what comes back is my vote, unaltered. Delegation is a
+\emph{vertical} morphism, which \texttt{federation} calls a degenerate corner of
+the formalism. Here the degenerate corner is the subject.
+
+\subsection*{The party tree}
+
+Rooted at a party. Its children are its members, and it too is indexed by issue,
+because a party may put defence to one member and health to another.
+
+\begin{term}
+  (party A)
+  |- education
+  |    |- art and creativity .. member: Ali
+  |    '- (everything else) ... members: Ali, Bea, Carl   -> amalgamate
+  '- health ................... members: Bea, Carl        -> amalgamate
+\end{term}
+
+Here several members may answer the same issue, and the party must return
+\emph{one} vote. The backward map is therefore an \textbf{amalgamation}: a fold
+over the replies --- majority, weighted majority, unanimity, or a party line that
+ignores them.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+& delegation tree & party tree \\
+\midrule
+rooted at & a citizen & a party \\
+indexed by & the issue tree & the issue tree \\
+forward map & route by issue & route by issue \\
+how many answer & exactly one & possibly several \\
+\textbf{backward map} & \textbf{identity} & \textbf{a fold} \\
+combinator & $+$ & $\boxtimes$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{obs}
+The two trees are one construction with two backward maps. This is the same
+finding \texttt{federation.pdf} reports for cyclic federations --- ``the
+obstruction is in the response direction \dots\ the failure is entirely in the
+backward map'' --- arrived at from a different subject. Forward maps are where
+the routing lives and they are easy. Backward maps are where the content is.
+\end{obs}
+
+\section{The algebra, and all four combinators have a job}
+
+\begin{center}
+\begin{tabular}{@{}llp{7.1cm}@{}}
+\toprule
+& in the algebra & here \\
+\midrule
+$+$ & disjoint shapes, each keeping its own positions & \textbf{delegation.} One delegate per issue; refinement is which summand \\
+$\boxtimes$ & both shapes up front, \textbf{both replies owed} & \textbf{amalgamation.} Every member polled, every reply owed, then folded \\
+$\times$ & both offered, \textbf{exactly one answered} & \textbf{abstention.} A second choice, used when the first does not answer \\
+$\triangleleft$ & the first reply chooses the second prompt & \textbf{chaining.} You to a party, the party to a member \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This is the first of these projects in which all four are load-bearing.
+\texttt{stalin} and \texttt{federation} never use $+$; \texttt{firm} uses it once.
+Here $+$ is the primary structure and $\boxtimes$ is what makes a party a party.
+
+\section{The types}
+
+\begin{term}
+// ── Issues ────────────────────────────────────────────────────────────
+type IssueId = string;              // a path: "education/art"
+type Kind =
+  | { tag: "Binary" }
+  | { tag: "Choice"; options: readonly string[] }
+  | { tag: "Amount"; lo: number; hi: number };
+
+interface Issue { id: IssueId; kind: Kind; children: readonly IssueId[] }
+
+// ── The container. The position depends on the issue's kind. ──────────
+type VoteFor<K extends Kind> =
+    K extends { tag: "Binary" } ? { tag: "Aye" } | { tag: "Nay" }
+  : K extends { tag: "Choice" } ? { tag: "Pick"; option: string }
+  : K extends { tag: "Amount" } ? { tag: "Amount"; value: number }
+  : never;
+
+type IssueC =
+  | Fib<{ tag: "Poll"; issue: IssueId; visited: readonly VoterId[] }, Ballot>
+  | Fib<{ tag: "Reset" }, { tag: "ResetAck" }>;
+
+// A ballot ADMITS FAILURE. Cycles are a reply, not an exception, so the
+// caller must handle them and the type says so.
+type Ballot =
+  | { tag: "Cast";    vote: Vote;   weight: number }
+  | { tag: "Cycle";   ring: readonly VoterId[] }
+  | { tag: "Abstain"; who: VoterId; why: string };
+
+// ── Delegation: a partial map, inherited downward ─────────────────────
+type Delegation = ReadonlyMap<IssueId, VoterId>;
+
+/** The nearest ancestor of `issue`, inclusive, that has an entry. */
+function delegateFor(d: Delegation, issue: IssueId): VoterId | null;
+
+// ── Parties ───────────────────────────────────────────────────────────
+type Rule =
+  | { tag: "Majority" }                 // one member, one vote
+  | { tag: "Weighted" }                 // by delegated weight
+  | { tag: "Unanimous" }                // or the party abstains
+  | { tag: "Line"; vote: Vote };        // a leaf wearing a party's coat
+
+interface Party { id: VoterId; members: readonly VoterId[]; rule: Rule;
+                  assign: Delegation }   // which members get which issues
+\end{term}
+
+Two remarks on the types rather than the design.
+
+\texttt{Ballot} admitting \texttt{Cycle} is deliberate. A cycle is an ordinary
+outcome of asking a question, not an error condition, and putting it in the
+position type forces every caller to say what it does about one.
+
+\texttt{Rule} having a \texttt{Line} constructor is what lets a party be a leaf
+without being a different type. A party with a line answers from its own head;
+the citizen delegating to it sees the same interface either way, and \emph{ought}
+to be able to see which it is --- which is an argument for exposing \texttt{rule},
+not for a second type.
+
+\section{Resolution, and a correction}
+
+To resolve a vote is to walk from the citizen, following the forward maps, until
+somebody answers. The state --- who has been visited --- rides in the prompt,
+because \texttt{federation/mobius.ts} establishes that a header cannot be a type
+and \texttt{visited} must be typed if the base case is to be checkable.
+
+\begin{alarmbox}
+\textbf{A claim in \texttt{README.md} is wrong, and the party tree is what breaks
+it.}
+
+It said: per issue each citizen delegates to at most one representative, so
+out-degree is at most one, the graph is \emph{functional}, every component is a
+tail running into a single cycle, and cycle detection is correspondingly cheap.
+
+That holds for the delegation tree alone. It fails the moment a party is
+involved, because a party polls several members. Out-degree is one at a citizen
+and $n$ at a party, so the combined structure is not functional and its
+components are not $\rho$-shaped.
+
+\textbf{Resolution is therefore a fold over a tree, not a walk down a path},
+cycle detection must be per branch rather than per component, and the same
+delegate may be reached twice by different routes --- which is a question about
+weights before it is a question about cycles.
+\end{alarmbox}
+
+That correction is the reason this document exists before the code does.
+
+\section{Weight}
+
+A delegate's weight on an issue is the number of citizens whose resolution
+reaches them on that issue. So weight is an \textbf{output of resolution, not an
+input to it}, and it is per-issue: the same delegate carries different weight on
+health and on defence.
+
+The re-convergence just noted has a consequence here. If a citizen reaches Ali
+directly \emph{and} through party A, Ali must not be counted twice for that
+citizen. Weight is therefore a count of \emph{citizens reached}, deduplicated at
+the source, rather than a sum accumulated along edges.
+
+\section{What the algebra refuses to decide}
+
+Two choices are political rather than mathematical, and the formalism should
+present them rather than make them.
+
+\textbf{Cycle policy.} Detection is settled. What should happen is not. The vote
+abstains; or falls back to a $\times$ second choice; or returns to the citizen as
+a notification and waits; or is divided evenly round the ring. These are four
+different theories of what a delegated vote \emph{is}, and the type
+\texttt{Ballot} is deliberately wide enough to express all four.
+
+\textbf{Amalgamation rule.} Whether a party's members are counted one each or by
+the weight they personally carry is the difference between a party as a club and
+a party as a federation of blocs. \texttt{Rule} makes it a per-party choice, and
+it should probably be visible to anyone delegating to that party.
+
+\section{What to build first}
+
+\begin{enumerate}
+\item The issue tree, and \texttt{delegateFor} with inheritance. Small, and
+  everything rests on it.
+\item \texttt{resolve(citizen, issue)} as a tree fold with \texttt{visited} in
+  the prompt, returning a \texttt{Ballot}. Cycle policy pluggable, defaulting to
+  abstain, so the argument can be had against running code.
+\item Weights, deduplicated at the source, and a tally for one leaf issue.
+\item Only then: parties as separate processes, one per delegate, and the chat
+  room as $\boxtimes$ over the participants.
+\end{enumerate}
+
+\section{What is assumed}
+
+That a worker's state may be a set, since \texttt{visited} rides in the prompt
+exactly as \texttt{fuel} does in \texttt{mobius}. That question is out to
+Strathclyde and unanswered.
+
+That the electorate may be unbounded. The argument is in \texttt{README.md}: every
+delegate serves the \emph{same} container, so $\Sigma\,(d : D).\,\mathrm{IssueC}
+\cong D \times \mathrm{IssueC}$, and a sum of a constant family is a product with
+its index set and does not need the index finite. This is the one place where
+voting is easier than the firm, and it is worth knowing what would destroy it:
+give parties a capability individuals lack --- a manifesto endpoint, a whip ---
+and the family stops being constant.
+
+\end{document}

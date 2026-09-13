@@ -205,6 +205,55 @@ opinion, the identity (delegation relays), and the fold (a party amalgamates).
 > coalgebra νF, because a cycle unfolds to an infinite tree. The cycle problem is
 > the gap between the two fixed points and nothing else.
 
+## It runs
+
+```
+deno check *.ts lib/*.ts        # includes the type tests; fails in both directions
+deno run --allow-env check.ts   # eleven assertions against the worked electorate
+
+./vote divisions [survivors]    # every leaf issue, resolved for every citizen
+./vote room education/art       # who carries what weight into the debate
+./vote trace dave military/deployment
+./vote disclose refined-rita education/art
+```
+
+`example.ts` is the brief's electorate — parties A, B and C, the independent
+Sarah Smith, and a citizen who delegates A to education, C elsewhere, and
+refines art to Sarah — plus the two things the brief does not mention and the
+design says must be faced: a **sub-party** inside party A, and a **cycle**.
+
+```
+  health/primary           {"tag":"Nay"}×4  {"tag":"Aye"}×1   turnout 5/5
+  education/art            {"tag":"Aye"}×3  {"tag":"Nay"}×2   turnout 5/5
+  military/procurement     {"Amount":75}×1  {"Amount":90}×1   turnout 2/5  (2 cycled, 1 abstained)
+  military/deployment      {"tag":"Aye"}×2  {"tag":"Nay"}×1   turnout 3/5  (2 cycled)
+```
+
+The chat room is the other view of the same data — weight is an *output* of
+resolution, deduplicated at the source:
+
+```
+who speaks on education/art, weighted by citizens reached:
+  sarah            ██ 2
+  ali              █ 1
+  party-A          █ 1
+  …
+```
+
+### What building it found
+
+**A party line cannot be one vote.** The first run returned `{"tag":"Nay"}` on
+`military/procurement`, which is an `Amount` issue — an illegal vote, cast with
+a straight face. An edge is inherited over a whole subtree, and a subtree may
+mix kinds, so a whip is a **map** from issues to positions, inherited like
+everything else, and a position that is not legal where it lands is an
+abstention rather than a coerced answer. `type-tests.ts` §5 is that bug, frozen.
+
+**The policy choice is visible in the numbers.** `abstain-all` versus
+`survivors` differs only on issues where a branch failed — turnout 2/5 against
+3/5 on `military/procurement`, identical everywhere else. That is the argument
+made concrete, which is what it was for.
+
 ## What to build first
 
 A tree of issues and `delegateFor` with inheritance; then `resolve` as a tree
@@ -218,4 +267,7 @@ branch of a fold cycles or exhausts, does the party abstain wholesale, or fold
 over the branches that answered?** Folding over the survivors is kinder and
 quietly moves the majority threshold.
 
-`lib/` is not vendored yet; it will be, from `federation`, when there is code.
+`lib/` is vendored from `firm`, unmodified. Its README records one inherited
+divergence and one **known defect** — `delegate` spawns each hop with an
+unscoped `--allow-net`, so per-edge network scoping is decorative. Leaf-ness is
+enforced; which edges a non-leaf may take is not.
